@@ -121,14 +121,16 @@ def _get_color(value):
         return value
 
 
-def _get_rgb(value):
+def _get_rgb(value, opacity=True):
     value = _get_color(value)
+    print(f'value: {value}')
     if value.startswith("#"):
         value = value[1:]
         tmp = " ".join(str(int(value[i : i + 2], 16)) for i in (0, 2, 4))
         if len(value) == 8:
             alpha = str(int(value[6:], 16) / 256)
-            tmp += " / " + alpha
+            if opacity:
+                tmp += " / " + alpha
         value = tmp
     elif value.startswith("rgb") and value.endswith(")"):
         value = value[value.find("(") + 1 : -1]
@@ -136,6 +138,7 @@ def _get_rgb(value):
         raise ValueError(
             f"expected a hex value, theme color or rgb value, not, {value}"
         )
+    print(value)
     return value
 
 

@@ -35,7 +35,7 @@ css = """
     height: 0;
 }
 .switch label input[type=checkbox]:checked+.lever {
-    background-color: rgba(var(--color), .5);
+    background-color: rgba(var(--color) / 0.5);
 }
 .switch label input[type=checkbox]:checked+.lever:after,
 .switch label input[type=checkbox]:checked+.lever:before {
@@ -172,7 +172,10 @@ class Switch(CheckBox):
     @checked_color.setter
     def checked_color(self, value):
         self._checked_color = value
-        self._dom_node.style.setProperty("--color", _get_rgb(value))
+        print('test')
+        print(_get_rgb(value, opacity=False))
+        print('test')
+        self._dom_node.style.setProperty("--color", _get_rgb(value, opacity=False))
 
     @property
     def text_pre(self):
