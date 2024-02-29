@@ -11,9 +11,7 @@ from anvil.tables import app_tables
 
 __version__ = "2.6.0"
 
-config = {
-    "get_roles_row": None
-}
+config = {"get_roles_row": None}
 
 
 def _validate_mode(mode):
