@@ -25,7 +25,6 @@ def set_user_roles_getter(option):
         config["get_roles_row"] = app_tables.users.get(user=user)['roles']
     elif isinstance(option, str):  # table name
         config["get_roles_row"] = getattr(app_tables, option).get(user=user)['roles']
-        print(config["get_roles_row"])
     else:
         raise TypeError("set_user_roles_getter: option is not valid.")
 
