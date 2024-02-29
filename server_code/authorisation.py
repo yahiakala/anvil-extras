@@ -59,7 +59,7 @@ def has_permission(permissions):
     try:
         user_permissions = set(
             permission["name"]
-            for role in config['get_roles_row']
+            for role in config["get_roles_row"]
             for permission in role["permissions"]
         )
     except TypeError:
