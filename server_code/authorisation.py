@@ -101,17 +101,21 @@ def set_config(**kwargs):
     if "get_roles_row" in kwargs:
         set_user_roles_getter(kwargs["get_roles_row"])
 
+
 def set_user_roles_getter(option):
     if option is None:
         config["get_roles_row"] = None
     elif callable(option):
         config["get_roles_row"] = option
     elif isinstance(option, str):
-        config["get_roles_row"] = lambda user: getattr(app_tables, option).get(user=user)
-    elif ...: # option is app_table
+        config["get_roles_row"] = lambda user: getattr(app_tables, option).get(
+            user=user
+        )
+    elif ...:  # option is app_table
         config["get_roles_row"] = lambda user: option.get(user=user)
     else:
         raise TypeError(...)
+
 
 def authorisation_required(permissions):
     """A decorator to ensure a user has sufficient permissions to call a server function"""
