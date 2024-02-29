@@ -26,7 +26,7 @@ def set_user_roles_getter(option):
         config["get_roles_row"] = option
     elif isinstance(option, str):  # table name
         user = anvil.users.get_user()
-        config["get_roles_row"] = lambda user: getattr(app_tables, option).get(
+        config["get_roles_row"] = getattr(app_tables, option).get(
             user=user
         )
     else:
