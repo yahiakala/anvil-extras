@@ -32,6 +32,24 @@ def _set_user_roles_getter(option):
     else:
         raise TypeError("get_roles: option is not valid.")
 
+config = {"get_roles": lambda user: user["roles"]}
+
+
+def set_config(**kwargs):
+    if "get_roles" in kwargs:
+        _set_user_roles_getter(kwargs["get_roles"])
+
+
+def _set_user_roles_getter(option):
+    if option is None:
+        config["get_roles"] = lambda user: user["roles"]
+    elif isinstance(option, str):  # table name
+        config["get_roles"] = lambda user: getattr(app_tables, option).get(user=user)[
+            "roles"
+        ]
+    else:
+        raise TypeError("get_roles: option is not valid.")
+
 
 def authentication_required(func):
     """A decorator to ensure only a valid user can call a server function"""
