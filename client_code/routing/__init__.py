@@ -5,14 +5,15 @@
 #
 # This software is published at https://github.com/anvilistas/anvil-extras
 
-__version__ = "2.4.0"
+__version__ = "2.6.2"
 
 from anvil.js import window as _w
 
+from ..utils._view_transition import use_transitions
 from . import _navigation
 from . import _router as _r
 from ._alert import alert
-from ._decorators import error_form, redirect, route, template
+from ._decorators import error_form, lazy_route, redirect, route, template
 from ._logging import logger
 from ._router import NavigationExit, launch
 from ._utils import (

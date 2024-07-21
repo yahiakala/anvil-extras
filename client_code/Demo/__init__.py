@@ -11,7 +11,7 @@ from ..UnitTestComponent import UnitTestComponent
 from ..utils import auto_refreshing
 from ._anvil_designer import DemoTemplate
 
-__version__ = "2.4.0"
+__version__ = "2.6.2"
 dataset_url = "https://pivottable.js.org/examples/mps.json"
 
 

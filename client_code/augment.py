@@ -5,26 +5,46 @@
 #
 # This software is published at https://github.com/anvilistas/anvil-extras
 
-from functools import cache as _cache
 from functools import partial as _partial
+from functools import wraps as _wraps
 
 import anvil as _anvil
 from anvil import Component as _Component
 from anvil import DataGrid as _DataGrid
 from anvil import js as _js
-from anvil.js.window import Function as _Function
+from anvil.js.window import WeakMap as _WeakMap
 from anvil.js.window import jQuery as _S
 
-__version__ = "2.4.0"
+from .utils._deprecated import deprecated
+
+__version__ = "2.6.2"
 
 __all__ = ["add_event", "add_event_handler", "set_event_handler", "trigger"]
 
 _Callable = type(lambda: None)
+_prefix = "x-augmented-"
+
+# because Skulpt doesn't have a WeakMap and js WeakMap preserves identity of methods
+_wm = _WeakMap()
+
+
+def _weak_cache_event(fn):
+    @_wraps(fn)
+    def wrapper(instance, event: str):
+        event_map = _wm.get(instance)
+        if event_map is None:
+            _wm.set(instance, {})
+            event_map = _wm.get(instance)
+        if event not in event_map:
+            event_map[event] = fn(instance, event)
+        return event_map[event]
+
+    return wrapper
 
 
 # use cache so we don't add the same event to the component multiple times
 # we only need to add the event once and use anvil architecture to raise the event
-@_cache
+@_weak_cache_event
 def add_event(component: _Component, event: str) -> None:
     """component: (instantiated) anvil component
     event: str - any jquery event string
@@ -32,10 +52,10 @@ def add_event(component: _Component, event: str) -> None:
     if not isinstance(event, str):
         raise TypeError("event must be type str and not " + type(event))
 
+    _add_event(component, event)
+
     if _has_native_event(component, event):
         return
-
-    _add_event(component, event)
 
     def handler(e):
         handleObj = e.get("handleObj")
@@ -77,16 +97,11 @@ def remove_event_handler(component: _Component, event: str, func: _Callable) -> 
     component.remove_event_handler(event, func)
 
 
-_trigger_writeback = _Function(
-    "self",
-    """
-    self = PyDefUtils.unwrapOrRemapToPy(self);
-    const mapPropToWriteback = (p) => () => PyDefUtils.suspensionFromPromise(self._anvil.dataBindingWriteback(self, p.name));
-    const customPropsToWriteBack = (self._anvil.customComponentProperties || []).filter(p => p.allow_binding_writeback).map(mapPropToWriteback);
-    const builtinPropsToWriteBack = self._anvil.propTypes.filter(p => p.allowBindingWriteback).map(mapPropToWriteback);
-    return Sk.misceval.chain(Sk.builtin.none.none$, ...customPropsToWriteBack, ...builtinPropsToWriteBack);
-""",
+@deprecated(
+    "trigger('writeback') is no longer supported\nYou can now trigger a writeback using component.raise_event('x-anvil-write-back-<property>')"
 )
+def _trigger_writeback(self):
+    return
 
 
 def trigger(self: _Component, event: str):
@@ -115,25 +130,68 @@ def _get_jquery_for_component(component):
         return _S(_js.get_dom_node(component))
 
 
-# TODO this is hacking with anvil internals
-_add_event = _Function(
-    "self",
-    "eventName",
-    """
-    self = PyDefUtils.unwrapOrRemapToPy(self);
-    self._anvil.eventTypes[eventName] = self._anvil.eventTypes[eventName] || {name: eventName, $augmented: true};
-""",
-)
+def _noop(**e):
+    pass
 
-_has_native_event = _Function(
-    "self",
-    "eventName",
-    """
-    self = PyDefUtils.unwrapOrRemapToPy(self);
-    const eventDescriptor = self._anvil.eventTypes[eventName];
-    return eventDescriptor && !eventDescriptor.$augmented;
-""",
-)
+
+_remap = set()
+_native = set()
+
+
+def _add_event(self, event_name):
+    key = (type(self), event_name)
+    if key in _native or key in _remap:
+        return
+    try:
+        self.add_event_handler(event_name, _noop)
+    except ValueError:
+        _remap.add(key)
+    else:
+        _native.add(key)
+        self.remove_event_handler(event_name, _noop)
+
+
+@_weak_cache_event
+def _get_handler(fn, event):
+    @_wraps(fn)
+    def wrap_handler(*args, **kws):
+        kws["event_name"] = event
+        return fn(*args, **kws)
+
+    return wrap_handler
+
+
+def wrap_event_method(method):
+    old_method = getattr(_Component, method)
+
+    @_wraps(old_method)
+    def wrapped(self, event, *args, **kws):
+        key = (type(self), event)
+        if key not in _remap:
+            return old_method(self, event, *args, **kws)
+
+        remapped = _prefix + event
+
+        if len(args) == 1 and callable(args[0]):
+            args = [_get_handler(args[0], event)]
+
+        return old_method(self, remapped, *args, **kws)
+
+    setattr(_Component, method, wrapped)
+
+
+for method in [
+    "raise_event",
+    "add_event_handler",
+    "set_event_handler",
+    "remove_event_handler",
+]:
+    wrap_event_method(method)
+
+
+def _has_native_event(self, event):
+    key = (type(self), event)
+    return key in _native
 
 
 old_data_grid_event_handler = _DataGrid.set_event_handler

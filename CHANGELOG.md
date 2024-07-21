@@ -1,14 +1,134 @@
 # Unreleased
 
+## Minor Changes
+* persistence - add reset method
+  https://github.com/anvilistas/anvil-extras/pull/542
+* persistence - add set behaviour for linked classes
 ## Bug Fixes
+* multiselect - fix bug where enable_selct_all was not being set correctly
+  https://anvil.works/forum/t/anvil-extras-2-6/21252/4
+* non-blocking - fix catching exceptions when accessing a non-blocking promise
+  https://github.com/anvilistas/anvil-extras/pull/543
+
+# v2.6.2 13-Jun-2024
+
+## Minor Changes
+* authorisation - added config option to avoid adding a roles column to the users table
+  https://github.com/anvilistas/anvil-extras/pull/516
+* storage - proxyobjects are passed to the underlying storage so that those implementing the serializable interface can be stored
+  https://github.com/anvilistas/anvil-extras/pull/533
+
+## Bug Fixes
+* Slider - allow connect and behaviour to be set at runtime
+  https://github.com/anvilistas/anvil-extras/issues/538
+* persistence - fix get method
+  https://github.com/anvilistas/anvil-extras/issues/523
+* persistence - fix handling of Linked Attributes with no row
+  https://github.com/anvilistas/anvil-extras/issues/534
+* MultiSelect - fix an issue with multiselect on the self hosted app server
+  https://github.com/anvilistas/anvil-extras/issues/525
+* routing - fix redirect with None conditions
+  https://github.com/anvilistas/anvil-extras/pull/532
+* MultiSelect - fix an issue where the dropdown menu would remain open when the form is hidden
+  https://github.com/anvilistas/anvil-extras/issues/536
+
+
+# v2.6.1 27-Mar-2024
+
+## Bug Fixes
+* routing - fix initialisation of history state
+  https://github.com/anvilistas/anvil-extras/discussions/519
+* multiselect - fix visible False property in the designer
+  https://github.com/anvilistas/anvil-extras/issues/510
+* multiselect - fix toggling enabled property loses selected state
+  https://github.com/anvilistas/anvil-extras/issues/513
+* switch - fix lever color when switch is checked
+  https://github.com/anvilistas/anvil-extras/pull/517
+* routing - fix on_form_load might fire stale value if form_show event is slow
+  https://github.com/anvilistas/anvil-extras/discussions/521
+
+## Minor Changes
+* designer hints - add some designer hints to components
+  https://github.com/anvilistas/anvil-extras/pull/512
+* authorisation - added config option to avoid adding a roles column to the users table
+  https://github.com/anvilistas/anvil-extras/pull/516
+
+# v2.6.0 09-Feb-2024
+
+## Bug Fixes
+* routing - fix rendering slow loading pages
+  https://github.com/anvilistas/anvil-extras/pull/501
+* logging - add missing date format parameter
+  https://github.com/anvilistas/anvil-extras/pull/502
+* logging - fix critical error message displays as warning
+  https://github.com/anvilistas/anvil-extras/pull/505
+
+## Minor Changes
+* tabs - add better support for using faded colors e.g. `tabs.active_background = "#2196F344"`
+  https://github.com/anvilistas/anvil-extras/pull/483
+* augment - use python implementation
+  https://github.com/anvilistas/anvil-extras/pull/488
+* non-blocking: add a getter to expose the raw javascript promise
+  https://github.com/anvilistas/anvil-extras/pull/475
+
+## Deprecations
+* augment - trigger("writeback") is now deprecated - use the native version instead `raise_event('x-anvil-write-back-<property-name>)`
+  https://github.com/anvilistas/anvil-extras/issues/429
+
+
+# v2.5.4 15-Nov-2023
+
+## Enhancements
+* Tabs - adds active_background property
+  https://github.com/anvilistas/anvil-extras/issues/481
+
+## Bug Fixes
+* storage - fix a bug in ios when indexed db accessed in a webworker and closed
+  https://github.com/anvilistas/anvil-extras/discussions/484
+* routing - preserve properties when changing templates
+  https://github.com/anvilistas/anvil-extras/discussions/486
+
+
+# v2.5.2 25-Oct-2023
+* storage - fix bug with deserializing
+
+# v2.5.0 3-Oct-2023
+
+## New Features
+* authorisation - adds `check_permissions` and `has_permission` functions
+  https://github.com/anvilistas/anvil-extras/issues/382
+* `routing.lazy_route` - allows you to lazily load Forms whilst using routing
+  https://github.com/anvilistas/anvil-extras/pull/442
+* Autocompletion: adds filter_mode property - either contains or startswith
+  https://github.com/anvilistas/anvil-extras/discussions/444
+* navigation - ``set_mode("hash")`` can be used to set the default navigation mode to hash routing
+  https://github.com/anvilistas/anvil-extras/discussions/458
+* navigation - menu definition can include ``title``, rather than registering a form with a title
+  https://github.com/anvilistas/anvil-extras/discussions/453
+* navigation - set menu item visibility using conditions defined in the menu definition
+  https://github.com/anvilistas/anvil-extras/pull/460
+* view transitions - routing and navigation use a transition on page changes (can be turned off)
+  https://github.com/anvilistas/anvil-extras/pull/465
+* Progress Bars - support dynamic property changes
+  https://github.com/anvilistas/anvil-extras/pull/466
+
+## Bug Fixes
+* pivot - don't fail if self.items is not set
+  https://github.com/anvilistas/anvil-extras/pull/468
 * routing was no longer dismissing alerts on navigation
   you will now need to use `routing.alert` in place of `anvil.alert` for an alert to be dismissed on navigation
   non-dismissible alerts will block the navigation
   https://github.com/anvilistas/anvil-extras/pull/437
+* tabs - ensure the selected tab indicator adjusts when the tab component changes size
+  https://github.com/anvilistas/anvil-extras/pull/467
 
 ## Minor Changes
+* Slider - improve behaviour in the designer
+  https://github.com/anvilistas/anvil-extras/pull/472
 * wait_for_writeback is now written in pure python
   https://github.com/anvilistas/anvil-extras/pull/431
+* Switch - improve designer behaviour
+  https://github.com/anvilistas/anvil-extras/pull/470
 
 # v2.4.0 14-Jun-2023
 

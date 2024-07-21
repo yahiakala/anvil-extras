@@ -8,9 +8,10 @@
 from datetime import date, datetime
 
 import anvil.js
+from anvil.js import ExternalError
 from anvil.js import window as _window
 
-__version__ = "2.4.0"
+__version__ = "2.6.2"
 __all__ = ["local_storage", "indexed_db"]
 
 try:
@@ -27,6 +28,7 @@ _forage.dropInstance()
 _Proxy = type(_window)
 _Object = _window.Object
 _NoneType = type(None)
+_Array = type(_window.Array())
 
 _SPECIAL = "$$anvil-extras$$:"
 
@@ -41,9 +43,9 @@ def _is_str(key):
 def _serialize(obj):
     # we won't support subclasses of builtins so just check type is
     ob_type = type(obj)
-    if ob_type in (str, int, float, bool, _NoneType, bytes):
+    if ob_type in (str, int, float, bool, _NoneType, bytes, _Proxy):
         return obj
-    elif ob_type in (list, tuple):
+    elif ob_type in (list, tuple, _Array):
         return [_serialize(item) for item in obj]
     elif ob_type is dict:
         return {key: _serialize(val) for key, val in obj.items() if _is_str(key)}
@@ -70,7 +72,7 @@ def _special_deserialize(key, value):
 def _deserialize(obj):
     """convert simple proxy objects (and nested simple proxy objects) to dictionaries"""
     ob_type = type(obj)
-    if ob_type is list:
+    if ob_type in (list, _Array):
         return [_deserialize(item) for item in obj]
     elif ob_type is _Proxy and obj.__class__ == _Object:
         # Then we're a simple proxy object
@@ -84,6 +86,30 @@ def _deserialize(obj):
     else:
         # we're either bytes, str, ints, floats, None, bool
         return obj
+
+
+def wrap_with_retry(fn):
+    def wrapper(*args, **kws):
+        try:
+            return fn(*args, **kws)
+        except ExternalError:
+            try:
+                return fn(*args, **kws)
+            except ExternalError:
+                raise
+
+    return wrapper
+
+
+class RetryStoreWrapper:
+    def __init__(self, store):
+        self._store = store
+
+    def __getattr__(self, name):
+        maybe_method = getattr(self._store, name)
+        if callable(maybe_method):
+            return wrap_with_retry(maybe_method)
+        return maybe_method
 
 
 class StorageWrapper:
@@ -107,13 +133,14 @@ class StorageWrapper:
             return known_stores[store_name]
 
         store = object.__new__(cls)
-        store._store = _forage.createInstance(
+        forage_store = _forage.createInstance(
             {
                 "storeName": store_name,
                 "driver": [cls._driver, f"fail{cls._driver}"],
                 "name": "anvil_extras",
             }
         )
+        store._store = RetryStoreWrapper(forage_store)
         store._name = store_name
         known_stores[store_name] = store
         return store

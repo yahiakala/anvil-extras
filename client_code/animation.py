@@ -9,7 +9,7 @@ from anvil.js import await_promise as _await_promise
 from anvil.js import get_dom_node as _dom_node
 from anvil.js import window as _window
 
-__version__ = "2.4.0"
+__version__ = "2.6.2"
 
 
 class _Easing:
@@ -79,7 +79,7 @@ class Transition(dict):
         for key, val in transitions.items():
             assert (
                 type(val) is list or type(val) is tuple
-            ), "all tranistion must be lists"
+            ), "all transitions must be lists"
             if key not in _transforms:
                 continue
             t_keys.add(key)

@@ -14,7 +14,7 @@ from anvil.js.window import jQuery as _S
 from ..utils._component_helpers import _css_length, _html_injector, _spacing_property
 from ._anvil_designer import MultiSelectDropDownTemplate
 
-__version__ = "2.4.0"
+__version__ = "2.6.2"
 
 _html_injector.script(
     """
@@ -70,11 +70,15 @@ _defaults = {
     "enable_filtering": False,
     "multiple": True,
     "enabled": True,
+    "items": None,
     "spacing_below": "small",
     "spacing_above": "small",
     "enable_select_all": False,
     "width": "",
+    "visible": True,
 }
+
+visible_false_classes = ["visible-false", "anvil-visible-false"]
 
 
 def _props_property(prop, setter):
@@ -113,6 +117,7 @@ class MultiSelectDropDown(MultiSelectDropDownTemplate):
     def __init__(self, **properties):
         # Set Form properties and Data Bindings.
         self._init = False
+        self._selectPicker = None
 
         self._dom_node = _js.get_dom_node(self)
         _S_dom_node = _S(self._dom_node)
@@ -132,20 +137,24 @@ class MultiSelectDropDown(MultiSelectDropDownTemplate):
 
         self.set_event_handler("x-popover-init", self._mk_popover)
         self._user_selected_all(False)
-        self._reset()
-        if selected:
-            self.selected = selected
+        self._reset(selected)
         self._init = True
 
-    def _reset(self):
+    def _reset(self, selected=None):
+        if self._init:
+            selected = self.selected
         self._el.selectpicker(
             {"countSelectedText": lambda *args: self.format_selected_text(*args)}
         )
         self._el.on("changed.bs.select", self.change)
         self._el.on("shown.bs.select", self._opened)
         self._el.on("hidden.bs.select", self._closed)
-        menu = self._el.data("selectpicker")["$menu"]
+        self._selectPicker = self._el.data("selectpicker")
+        menu = self._selectPicker["$menu"]
         menu.find(".bs-actionsbox").on("click", self._user_selected_all)
+        self.visible = self.visible
+        if selected:
+            self.selected = selected
 
     def format_selected_text(self, count, total):
         if count > 3:
@@ -169,10 +178,10 @@ class MultiSelectDropDown(MultiSelectDropDownTemplate):
         options, values = _clean_items(value)
         self._el.append(options)
         self._values = values
-        self.selected = selected
         if self._init:
             self._el.selectpicker("refresh")
             self._el.selectpicker("render")
+            self.selected = selected
 
     @property
     def selected_keys(self):
@@ -216,17 +225,17 @@ class MultiSelectDropDown(MultiSelectDropDownTemplate):
     enable_select_all = _component_property("enable_select_all", "data-actions-box")
     tag = _HtmlPanel.tag
 
-    @property
-    def visible(self):
-        return _HtmlPanel.visible.__get__(self, type(self))
-
-    @visible.setter
-    def visible(self, val):
-        self._el.data("selectpicker")["$bsContainer"].toggleClass(
-            "visible-false", not val
-        )
+    def _set_visible(self, val):
         _HtmlPanel.visible.__set__(self, val)
+        selectPicker = self._selectPicker
+        if not selectPicker:
+            return
+        container = selectPicker["$bsContainer"]
+        visible_false = not val
+        for cs in visible_false_classes:
+            container.toggleClass(cs, visible_false)
 
+    visible = _props_property("visible", _set_visible)
     spacing_above = _spacing_property("above")
     spacing_below = _spacing_property("below")
 
@@ -251,6 +260,19 @@ class MultiSelectDropDown(MultiSelectDropDownTemplate):
     def _mk_popover(self, init_node, **event_args):
         # this is a bit of a hack - we're using the libraries private methods for this
         init_node(self._el.data("selectpicker")["$bsContainer"])
+
+    def _form_hide(self, **event_args):
+        try:
+            # this is a bit of a hack
+            # we need to remove the open class from the selectpicker
+            # otherwise the dropdown might remain open when the form is hidden
+            # this can happen if the form closes without the user interacting with the page
+            # e.g. if the form is closed by clicking the browser's back button
+            data = self._el.data("selectpicker")
+            data["$newElement"].removeClass("open")
+            data["$bsContainer"].removeClass("open")
+        except AttributeError:
+            pass
 
 
 ##### PRIVATE Functions #####

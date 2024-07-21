@@ -6,7 +6,7 @@
 # This software is published at https://github.com/anvilistas/anvil-extras
 import anvil.server
 
-__version__ = "2.4.0"
+__version__ = "2.6.2"
 
 
 def _snakify(text):
@@ -50,6 +50,9 @@ class LinkedAttribute:
         if not instance._store:
             return None
 
+        if not instance._store[self._linked_column]:
+            return None
+
         return instance._store[self._linked_column][self._linked_attr]
 
     def __set__(self, instance, value):
@@ -69,14 +72,23 @@ class LinkedClass:
         if instance is None:
             return self
 
+        if instance._delta and self._linked_column in instance._delta:
+            return self._cls(
+                instance._delta[self._linked_column], *self._args, **self._kwargs
+            )
         return self._cls(
             instance._store[self._linked_column], *self._args, **self._kwargs
         )
 
-    def __set__(self, instance, value):
-        raise AttributeError(
-            "Linked Class instance is already set and cannot be changed"
+        store = (
+            instance._delta
+            if instance._delta and self._linked_column in instance._delta
+            else instance._store
         )
+        return self._cls(store[self._linked_column], *self._args, **self._kwargs)
+
+    def __set__(self, instance, value):
+        instance._delta[self._linked_column] = self._cls(value._store)
 
 
 class PersistedClass:
@@ -113,7 +125,7 @@ class PersistedClass:
         try:
             return cls._cache[key]
         except KeyError:
-            row = anvil.server.call(f"get_{cls._snake_name}", {cls.key: key})
+            row = anvil.server.call(f"get_{cls._snake_name}", **{cls.key: key})
             obj = cls(store=row)
             cls._cache[key] = obj
             return obj
@@ -164,6 +176,9 @@ class PersistedClass:
 
     def delete(self, *args, **kwargs):
         anvil.server.call(f"delete_{self._snake_name}", self._store, *args, **kwargs)
+        self._delta.clear()
+
+    def reset(self):
         self._delta.clear()
 
 

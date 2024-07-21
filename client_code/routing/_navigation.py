@@ -11,10 +11,12 @@ from anvil.js.window import history, location, window
 
 from . import _router
 
-__version__ = "2.4.0"
+__version__ = "2.6.2"
 
 # re-initialise the state object which was overridden on load or this is a new session
 state = history.state or {"url": location.hash, "pos": 0}
+if "url" not in state:
+    state = {"url": location.hash, "pos": 0}
 history.replaceState(state, "", state["url"])
 
 # undo and pos are used for unload behavior

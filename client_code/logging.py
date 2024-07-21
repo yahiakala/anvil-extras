@@ -10,7 +10,7 @@ from datetime import datetime as _datetime
 from functools import wraps
 from time import time as _time
 
-__version__ = "2.4.0"
+__version__ = "2.6.2"
 
 NOTSET = 0
 DEBUG = 1
@@ -68,6 +68,7 @@ class Logger:
             "name": self.name,
             "time": now.time(),
             "datetime": now,
+            "date": now.date(),
             "level": _get_level_name(level),
             "msg": msg,
             **params,
@@ -99,7 +100,7 @@ class Logger:
 
     def critical(self, msg):
         """always outputs a message"""
-        self.log(WARNING, msg)
+        self.log(CRITICAL, msg)
 
     def __repr__(self):
         return (

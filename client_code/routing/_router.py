@@ -11,11 +11,12 @@ from itertools import chain
 from anvil import get_open_form, open_form
 from anvil.js.window import document
 
+from ..utils._view_transition import ViewTransition
 from ._alert import handle_alert_unload as _handle_alert_unload
 from ._logging import logger
 from ._utils import ANY, TemplateInfo, get_url_components
 
-__version__ = "2.4.0"
+__version__ = "2.6.2"
 
 
 class NavigationExit(Exception):
@@ -29,10 +30,8 @@ class navigation_context:
         self.is_stale = False
         self.url_hash = url_hash
 
-    @classmethod
-    def check_stale(cls):
-        contexts = cls.contexts
-        if contexts and contexts[-1].is_stale:
+    def check_stale(self):
+        if self.is_stale:
             raise NavigationExit
 
     @classmethod
@@ -102,18 +101,29 @@ _ordered_info = {}
 _error_form = None
 _ready = False
 _queued = []
+_force_launch = False
 
 
 def launch():
-    global _ready
+    global _force_launch, _ready
     _ready = True
-    if not _queued:
-        return navigate()
 
-    # only run the last _queued navigation
-    url_args, properties = _queued.pop()
+    template_instance = get_open_form()
+    current_template = type(template_instance)
+
+    _force_launch = template_instance is None or current_template not in _templates
+
+    if _queued:
+        # only run the last _queued navigation
+        url_args, properties = _queued.pop()
+    else:
+        url_args, properties = (), {}
+
     _queued.clear()
-    navigate(*url_args, **properties)
+    try:
+        navigate(*url_args, **properties)
+    finally:
+        _force_launch = False
 
 
 def navigate(url_hash=None, url_pattern=None, url_dict=None, **properties):
@@ -137,7 +147,9 @@ def navigate(url_hash=None, url_pattern=None, url_dict=None, **properties):
         handle_alert_unload()
         handle_form_unload()
         nav_context.check_stale()
-        template_info, init_path = load_template_or_redirect(url_pattern)
+        template_info, init_path = load_template_or_redirect(
+            url_hash, url_pattern, url_dict, properties, nav_context
+        )
         url_args = {
             "url_hash": url_hash,
             "url_pattern": url_pattern,
@@ -145,7 +157,6 @@ def navigate(url_hash=None, url_pattern=None, url_dict=None, **properties):
         }
         alert_on_navigation(**url_args)
         nav_context.check_stale()
-        clear_container()
         form = _cache.get(url_hash)
         if form is None:
             form = get_form_to_add(
@@ -153,10 +164,14 @@ def navigate(url_hash=None, url_pattern=None, url_dict=None, **properties):
             )
         else:
             logger.debug(f"loading route: {form.__class__.__name__!r} from cache")
+        with ViewTransition(form):
+            clear_container()
+            nav_context.check_stale()
+            _current_form = form
+            update_form_attrs(form)
+            add_form_to_container(form)
+        # if the form_show was slow don't fire the on_form_load callback
         nav_context.check_stale()
-        _current_form = form
-        update_form_attrs(form)
-        add_form_to_container(form)
         alert_form_loaded(form=form, **url_args)
 
 
@@ -180,11 +195,15 @@ def handle_form_unload():
             raise NavigationExit
 
 
-def load_template_or_redirect(url_hash):
-    global _current_form
-    form = get_open_form()
-    current_cls = type(form)
-    if form is not None and current_cls not in _templates:
+def load_template_or_redirect(url_hash, url_pattern, url_dict, properties, nav_context):
+    global _current_form, _force_launch
+    template_instance = get_open_form()
+    current_template = type(template_instance)
+    if (
+        template_instance is not None
+        and current_template not in _templates
+        and not _force_launch
+    ):
         raise NavigationExit  # not using templates
 
     logger.debug("checking templates and redirects")
@@ -194,13 +213,17 @@ def load_template_or_redirect(url_hash):
             path = next(path for path in paths if url_hash.startswith(path))
         except StopIteration:
             continue
+
         if condition is None:
-            break
+            pass
         elif not condition():
             continue
-        elif type(info) is TemplateInfo:
+
+        if type(info) is TemplateInfo:
             break
+
         redirect_hash = callable_()
+
         if isinstance(redirect_hash, str):
             if navigation_context.matches_current_context(redirect_hash):
                 # would cause an infinite loop
@@ -217,21 +240,24 @@ def load_template_or_redirect(url_hash):
                 redirect=True,
                 replace_current_url=True,
             )
-        navigation_context.check_stale()
+        nav_context.check_stale()
 
     else:
+        # if no break
         load_error_or_raise(f"no template for url_hash={url_hash!r}")
-    if current_cls is callable_:
+
+    if current_template is callable_:
         logger.debug(f"unchanged template: {callable_.__name__!r}")
         return info, path
     else:
-        msg = f"changing template: {current_cls.__name__!r} -> {callable_.__name__!r}"
+        msg = f"changing template: {current_template.__name__!r} -> {callable_.__name__!r}"
         logger.debug(msg)
         _current_form = None
         # mark context as stale so that this context is no longer considered the current context
         navigation_context.mark_all_stale()
         f = callable_()
         logger.debug(f"loaded template: {callable_.__name__!r}, re-navigating")
+        _queued.append([(url_hash, url_pattern, url_dict), properties])
         open_form(f)
         raise NavigationExit
 

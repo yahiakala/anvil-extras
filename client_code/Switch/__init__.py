@@ -11,7 +11,7 @@ from anvil.js.window import document as _document
 
 from ..utils._component_helpers import _get_rgb, _html_injector
 
-__version__ = "2.4.0"
+__version__ = "2.6.2"
 
 primary = app.theme_colors.get("Primary 500", "#2196F3")
 
@@ -35,7 +35,7 @@ css = """
     height: 0;
 }
 .switch label input[type=checkbox]:checked+.lever {
-    background-color: rgba(var(--color), .5);
+    background-color: rgba(var(--color) / .5);
 }
 .switch label input[type=checkbox]:checked+.lever:after,
 .switch label input[type=checkbox]:checked+.lever:before {
@@ -75,7 +75,7 @@ css = """
     transition: left 0.3s ease, background 0.3s ease, box-shadow 0.1s ease, transform 0.1s ease, -webkit-box-shadow 0.1s ease, -webkit-transform 0.1s ease;
 }
 .switch label .lever:before {
-    background-color: rgb(var(--color), 0.15);
+    background-color: rgb(var(--color) / 0.15);
 }
 .switch label .lever:after {
     background-color: #F1F1F1;
@@ -86,7 +86,7 @@ input[type=checkbox]:checked:not(:disabled) ~ .lever:active::before,
 input[type=checkbox]:checked:not(:disabled).tabbed:focus ~ .lever::before {
     -webkit-transform: scale(2.4);
     transform: scale(2.4);
-    background-color: rgb(var(--color), 0.15);
+    background-color: rgb(var(--color) / 0.15);
 }
 input[type=checkbox]:not(:disabled) ~ .lever:active:before,
 input[type=checkbox]:not(:disabled).tabbed:focus ~ .lever::before {
@@ -107,11 +107,45 @@ input[type=checkbox]:not(:disabled).tabbed:focus ~ .lever::before {
 """
 _html_injector.css(css)
 
+_remove_props = ["allow_indeterminate", "text", "underline"]
+
+_include_props = [
+    {
+        "name": "checked_color",
+        "type": "color",
+        "default_value": None,
+        "group": "appearance",
+        "important": False,
+    },
+    {
+        "name": "text_pre",
+        "type": "string",
+        "default_value": "",
+        "group": "text",
+        "important": True,
+    },
+    {
+        "name": "text_post",
+        "type": "string",
+        "default_value": "",
+        "group": "text",
+        "important": True,
+    },
+]
+
+
+def _clean_props(props):
+    props = [p for p in props if p.get("name") not in _remove_props]
+    return _include_props + props
+
+
+_prop_descriptions = _clean_props(getattr(CheckBox, "_anvil_properties_", []))
+
 
 class Switch(CheckBox):
     def __init__(self, checked_color=primary, text_pre="", text_post="", **properties):
         dom_node = self._dom_node = _get_dom_node(self)
-        dom_node.querySelector(".checkbox").classList.add("switch")
+        dom_node.firstElementChild.classList.add("switch")
 
         span = dom_node.querySelector("span")
         span.classList.add("lever")
@@ -157,3 +191,8 @@ class Switch(CheckBox):
         self._textnode_post.textContent = value
 
     text = text_post  # override the CheckBox property
+
+    _anvil_properties_ = _prop_descriptions
+
+    def _anvil_get_interactions_(self):
+        return []

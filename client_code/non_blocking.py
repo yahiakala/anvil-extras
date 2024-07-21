@@ -11,7 +11,7 @@ from anvil.js import report_exceptions as _report
 from anvil.js import window as _W
 from anvil.server import call_s as _call_s
 
-__version__ = "2.4.0"
+__version__ = "2.6.2"
 
 try:
     # just for a nice repr by default
@@ -110,6 +110,15 @@ class _AsyncCall:
     def status(self):
         """Returns: 'PENDING', 'FULFILLED', 'REJECTED'"""
         return self._deferred.status
+
+    @property
+    def promise(self):
+        """Returns: JavaScript Promise that resolves to the value from the function call"""
+        return _W.Promise(
+            lambda resolve, reject: resolve(
+                self._deferred.promise.then(lambda r: r.value, reject)
+            )
+        )
 
     def on_result(self, result_handler, error_handler=None):
         error_handler = error_handler and _report(error_handler)

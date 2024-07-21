@@ -19,7 +19,7 @@ from ..utils._component_helpers import (
 )
 from ._anvil_designer import TabsTemplate
 
-__version__ = "2.4.0"
+__version__ = "2.6.2"
 
 _html_injector.css(
     """
@@ -66,18 +66,22 @@ _html_injector.css(
     white-space: nowrap;
 }
 .tabs .tab a:focus,.tabs .tab a:focus.active {
-    background-color: rgb(var(--color), 0.2);
+    --fallback-bg: var(--color) / 0.2;
+    background-color: rgb(var(--active-bg, var(--fallback-bg)));
     outline: none
 }
 .tabs .tab a:hover,.tabs .tab a.active {
     background-color: transparent;
     color: rgb(var(--color));
 }
+.tabs .tab a:hover,.tabs .tab a.active {
+    background-color: rgb(var(--active-bg));
+}
 .tabs .indicator {
     position: absolute;
     bottom: 0;
     height: 3px;
-    background-color: rgb(var(--color), 0.4);
+    background-color: rgb(var(--color) / 0.4);
     will-change: left, right;
 }
 """
@@ -87,6 +91,7 @@ _defaults = {
     "align": "left",
     "tab_titles": [],
     "active_tab_index": 0,
+    "active_background": "",
     "spacing_above": "none",
     "spacing_below": "none",
     "foreground": "",
@@ -98,6 +103,21 @@ _defaults = {
     "font": None,
     "font_size": None,
 }
+
+from anvil.js import window
+
+ResizeObserver = window.get("ResizeObserver")
+if ResizeObserver is None:
+
+    class ResizeObserver:
+        def __init__(self, *args):
+            pass
+
+        def observe(self, node):
+            pass
+
+        def disconnect(self):
+            pass
 
 
 def _apply_to_links(prop):
@@ -115,6 +135,7 @@ def _apply_to_links(prop):
 class Tabs(TabsTemplate):
     def __init__(self, **properties):
         #### set up dom nodes
+        self._shown = False
         dom_node = self._dom_node = anvil.js.get_dom_node(self)
         dom_node.style.padding = "0"
         dom_node.classList.add("anvil-extras-tabs")
@@ -129,7 +150,7 @@ class Tabs(TabsTemplate):
         if isinstance(props["font_size"], str) and props["font_size"].isdigit():
             props["font_size"] = int(props["font_size"])
 
-        self._prev = props["active_tab_index"]
+        self._prev = props["active_tab_index"] or 0
 
         props_to_init = {
             "tab_titles": props["tab_titles"],
@@ -137,15 +158,22 @@ class Tabs(TabsTemplate):
             "spacing_below": props["spacing_below"],
             "foreground": props["foreground"],
             "background": props["background"],
+            "active_background": props["active_background"],
             "role": props["role"],
             "visible": props["visible"],
         }
 
         self.init_components(**props_to_init)
-        # do this on the link element incase the user has already set the form show event
-        link_0 = self.get_components()[0]
-        if link_0:
-            link_0.set_event_handler("show", lambda **e: self._set_indicator())
+        self._ro = ResizeObserver(lambda *e: self._set_indicator())
+
+    def _on_show(self, **event_args):
+        if self._shown:
+            return
+        self._ro.observe(self._dom_node)
+
+    def _on_hide(self, **event_args):
+        self._shown = False
+        self._ro.disconnect()
 
     def _raise_tab_click(self, sender, tab_index, **event_args):
         self._set_indicator(tab_index)
@@ -157,15 +185,19 @@ class Tabs(TabsTemplate):
         )
 
     def _set_indicator(self, tab_index=None):
+        animate = tab_index is not None
         tab_index = tab_index if tab_index is not None else self._prev
 
         for i, node in enumerate(self._link_nodes):
             node.classList.toggle("active", i == tab_index)
 
         left, right = (0, 90) if tab_index <= self._prev else (90, 0)
-        self._indicator.style.transition = (
-            f"left 300ms ease-out {left}ms, right 300ms ease-out {right}ms"
-        )
+        if animate:
+            self._indicator.style.transition = (
+                f"left 300ms ease-out {left}ms, right 300ms ease-out {right}ms"
+            )
+        else:
+            self._indicator.style.transition = ""
 
         self._prev = tab_index
         link_node = self._link_nodes[tab_index]
@@ -207,7 +239,16 @@ class Tabs(TabsTemplate):
 
     @active_tab_index.setter
     def active_tab_index(self, index):
-        self._set_indicator(index)
+        self._set_indicator(index or 0)
+
+    @property
+    def active_background(self):
+        return self._props["active_background"]
+
+    @active_background.setter
+    def active_background(self, value):
+        self._props["active_background"] = value
+        self._dom_node.style.setProperty("--active-bg", value and _get_rgb(value))
 
     @property
     def foreground(self):

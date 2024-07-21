@@ -10,29 +10,38 @@ import anvil.js
 from anvil import Component as _Component
 from anvil import app as _app
 from anvil.js import get_dom_node as _get_dom_node
+from anvil.js import window
 from anvil.js.window import Promise as _Promise
 from anvil.js.window import document as _document
 
-__version__ = "2.4.0"
+__version__ = "2.6.2"
 
 _characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+window.anvilExtras = window.get("anvilExtras", {})
+window.anvilExtras["injectedHtml"] = window.anvilExtras.get("injectedHtml", {})
+_injectedHtml = window.anvilExtras["injectedHtml"]
 
 
 class HTMLInjector:
-    _injected_css = set()
+    def _is_injected(self, text, type):
+        hashed = hash((type, text))
+        if hashed in _injectedHtml:
+            return True
+        _injectedHtml[hashed] = True
+        return False
 
     def css(self, css):
         """inject some custom css"""
-        hashed = hash(css)
-        if hashed in self._injected_css:
+        if self._is_injected(css, "css"):
             return
         sheet = self._create_tag("style")
         sheet.innerHTML = css
         self._inject(sheet, head=False)
-        self._injected_css.add(hashed)
 
     def cdn(self, cdn_url, **attrs):
         """inject a js/css cdn file"""
+        if self._is_injected(cdn_url, "cdn"):
+            return
         if cdn_url.endswith("js"):
             tag = self._create_tag("script", src=cdn_url, **attrs)
         elif cdn_url.endswith("css"):
@@ -44,6 +53,8 @@ class HTMLInjector:
 
     def script(self, js):
         """inject some javascript code inside a script tag"""
+        if self._is_injected(js, "script"):
+            return
         s = self._create_tag("script")
         s.textContent = js
         self._inject(s)
@@ -96,14 +107,16 @@ def _spacing_property(a_b):
     return property(getter, setter, None, a_b)
 
 
-_primary = _app.theme_colors.get("Primary 500", "#2196F3")
+_primary_color = (window.document.querySelector("meta[name=theme-color]") or {}).get(
+    "content", "#2196F3"
+)
 
 
 def _get_color(value):
     if not value:
-        return _primary
+        return _primary_color
     elif value.startswith("theme:"):
-        return _app.theme_colors.get(value.replace("theme:", ""), _primary)
+        return _app.theme_colors.get(value.replace("theme:", ""), _primary_color)
     else:
         return value
 
@@ -112,9 +125,13 @@ def _get_rgb(value):
     value = _get_color(value)
     if value.startswith("#"):
         value = value[1:]
-        value = ",".join(str(int(value[i : i + 2], 16)) for i in (0, 2, 4))
+        tmp = " ".join(str(int(value[i : i + 2], 16)) for i in (0, 2, 4))
+        if len(value) == 8:
+            alpha = str(int(value[6:], 16) / 256)
+            tmp += " / " + alpha
+        value = tmp
     elif value.startswith("rgb") and value.endswith(")"):
-        value = value[value.find("("), -1]
+        value = value[value.find("(") + 1 : -1]
     else:
         raise ValueError(
             f"expected a hex value, theme color or rgb value, not, {value}"

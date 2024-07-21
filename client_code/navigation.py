@@ -6,7 +6,9 @@
 # This software is published at https://github.com/anvilistas/anvil-extras
 from anvil import Label, Link, get_open_form, set_url_hash
 
-__version__ = "2.4.0"
+from .utils._view_transition import ViewTransition, use_transitions
+
+__version__ = "2.6.2"
 
 # A dict mapping a form's name to a further dict with the form's class and title
 _forms = {}
@@ -22,9 +24,24 @@ _visibility = {}
 
 _title_label = Label()
 
+_default_mode = "classic"
+
+
+def _validate_mode(mode):
+    if mode not in ("classic", "hash"):
+        raise ValueError(
+            "A navigation link's routing must either be 'classic' or 'hash'"
+        )
+
+
+def set_mode(mode):
+    global _default_mode
+    _validate_mode(mode)
+    _default_mode = mode
+
 
 class register:
-    """A decorator to register a form in the _forms dict."""
+    """A decorator to register a form as a navigation target (only use in classic mode)"""
 
     def __init__(self, name, title=None):
         self.name = name
@@ -50,9 +67,12 @@ def set_title(text):
 def open_form(form_name, *args, full_width=False, **kwargs):
     """Use classic routing to open a registered form"""
     form = get_form(form_name, *args, **kwargs)
-    set_title(_forms[form_name]["title"])
-    get_open_form().content_panel.clear()
-    get_open_form().content_panel.add_component(form, full_width_row=full_width)
+    with ViewTransition(form):
+        title = _forms[form_name]["title"]
+        if title is not None:
+            set_title(title)
+        get_open_form().content_panel.clear()
+        get_open_form().content_panel.add_component(form, full_width_row=full_width)
 
 
 def go_to(target):
@@ -75,6 +95,9 @@ def _reset_links():
             link.role = []
 
 
+_actions = {"classic": open_form, "hash": set_url_hash}
+
+
 def _default_link_click(**event_args):
     """A handler for navigation link click events
     * Clears the role of all links registered in this module
@@ -84,11 +107,13 @@ def _default_link_click(**event_args):
     _reset_links()
     link = event_args["sender"]
     link.role += ["selected"]
-    actions = {"classic": open_form, "hash": set_url_hash}
+
     kwargs = {}
     if link.tag.routing == "classic":
         kwargs["full_width"] = link.tag.full_width
-    actions[link.tag.routing](link.tag.target, **kwargs)
+    if link.tag.title is not None:
+        set_title(link.tag.title)
+    _actions[link.tag.routing](link.tag.target, **kwargs)
 
 
 def _visibility_event_handler(**event_args):
@@ -117,48 +142,62 @@ def build_menu(container, items, with_title=True):
         _links.append(link)
         visibility = link.tag.visibility
         if visibility is None:
-            link.visible = True
+            link.visible = not link.tag.condition
         else:
             link.visible = False
             _register_visibility(container, link, visibility)
         container.add_component(link)
+    check_conditions()
+
+
+def check_conditions():
+    for link in _links:
+        condition = link.tag.condition
+        if condition is None:
+            continue
+        link.visible = bool(condition())
 
 
 def navigation_link(
-    routing="classic",
+    routing=None,
     full_width=False,
     target=None,
+    title=None,
     on_click=None,
     visibility=None,
+    condition=None,
     **kwargs,
 ):
     """Create a link instance
 
     Parameters
     ----------
-    routing
-      Either 'classic' or 'hash'
     full_width
       Whether the link target should open as full width
     target
       Either the name of a registered form for classic routing or
       a url_hash for hash routing
+    title
+      sets the page title when this link is clicked
     on_click
       event handler to call when clicked
     visibility
       a dict mapping the names of events to either True or False
+    condition
+      a callable to determine whether a link is visible or not
     kwargs
       will be passed the Link constructor
     """
-    if routing not in ("classic", "hash"):
-        raise ValueError(
-            "A navigation link's routing must either be 'classic' or 'hash'"
-        )
+    routing = routing or _default_mode
+    _validate_mode(routing)
+
     link = Link(**kwargs)
     link.tag.routing = routing
     link.tag.full_width = full_width
     link.tag.target = target
     link.tag.visibility = visibility
+    link.tag.title = title
+    link.tag.condition = condition
     if on_click is None:
         link.set_event_handler("click", _default_link_click)
     else:

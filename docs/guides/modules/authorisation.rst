@@ -12,7 +12,7 @@ You will need to setup the Users and Data Table services in your app:
   * In the 'Data Tables' service, add:
   	* a table named 'permissions' with a text column named 'name'
 	* a table named 'roles' with a text column named 'name' and a 'link to table'column named 'permissions' that links to multiple rows of the permissions table
-	* a new 'link to table' column in the Users table named 'roles' that links to multiple rows of the 'roles' table
+	* a new 'link to table' column in the Users table named 'roles' that links to multiple rows of the 'roles' table (This behaviour is configurable - see below)
 
 Usage
 -----
@@ -61,5 +61,46 @@ function is called and raises an error if not:
 You can pass either a single string or a list of strings to the decorator. The function
 will only be called if the logged in user has ALL the permissions listed.
 
-Notes:
-* The order of the decorators matters. `anvil.server.callable` must come before either of the authorisation module decorators.
+Configuration Options
++++++++++++++++++++++
+Certain default behaviour is configurable.
+
+By default the user's table expects a 'roles' column, that links to multiple rows of the 'roles' table.
+Alternatively you can create a table that maps a user to linked rows of the role's table, avoiding adding extra columns to the user's table.
+
+* Create a table called 'usermap' with a column 'user' and a column 'roles'.
+* the 'user' column is a link to a row in the user's table. The 'roles' column is a link to multiple rows from the 'roles' table.
+
+.. code-block:: python
+
+    import anvil.server
+    from anvil_extras.authorisation
+
+    authorisation.set_config(get_roles="usermap")
+
+Now the authorisation module will use the 'usermap' table to get roles for a user.
+
+API
+---
+
+.. function:: authentication_required(fn)
+
+    Use as a decorator for any server function that requires a logged in user
+
+.. function:: authorisation_required(permissions)
+
+    Use as a decorator above a server function
+    permissions should be a string or iterable of strings
+
+
+.. function:: has_permission(permissions)
+
+    Returns True/False on whether a user is logged in and has valid permissions
+
+.. function:: check_permissions(permissions)
+
+    Raises a ValueError if there is no user or the user does not have valid permissions
+
+.. function:: set_config(**kwargs)
+
+    Sets custom configuration of this module. Accepts get_roles='table_name' as a keyword argument.

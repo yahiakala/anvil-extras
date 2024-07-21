@@ -4,7 +4,7 @@
 # https://github.com/anvilistas/anvil-extras/graphs/contributors
 #
 # This software is published at https://github.com/anvilistas/anvil-extras
-__version__ = "2.4.0"
+__version__ = "2.6.2"
 
 css = """ .anvil-role-progress-track, .anvil-role-progress-indicator {
     display: block;
@@ -39,6 +39,7 @@ css = """ .anvil-role-progress-track, .anvil-role-progress-indicator {
   content: '';
   -webkit-animation: running-progress 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   animation: running-progress 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  background-color: var(--anvil-extras-track-colour);
 }
 
 @-webkit-keyframes running-progress {

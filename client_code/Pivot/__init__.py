@@ -10,7 +10,7 @@ import anvil.js
 from ..utils import _component_helpers as helpers
 from ._anvil_designer import PivotTemplate
 
-__version__ = "2.4.0"
+__version__ = "2.6.2"
 
 pivottable_version = "2.23.0"
 jqueryui_version = "1.11.4"
@@ -79,7 +79,7 @@ class Pivot(PivotTemplate):
         options = {
             value: self.pivot_options[key] for key, value in self.option_names.items()
         }
-        _jquery(self.pivot_node).pivotUI(self.items, options)
+        _jquery(self.pivot_node).pivotUI(self.items or [], options)
 
     def form_show(self, **event_args):
         if not self.pivot_initiated:
