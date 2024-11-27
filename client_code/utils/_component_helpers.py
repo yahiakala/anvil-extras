@@ -14,7 +14,7 @@ from anvil.js import window
 from anvil.js.window import Promise as _Promise
 from anvil.js.window import document as _document
 
-__version__ = "2.6.2"
+__version__ = "3.0.0"
 
 _characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 window.anvilExtras = window.get("anvilExtras", {})
@@ -112,30 +112,82 @@ _primary_color = (window.document.querySelector("meta[name=theme-color]") or {})
 )
 
 
+def _supports_relative_colors():
+    return window.CSS.supports("color", "rgb(from white r g b / 0.2)")
+
+
 def _get_color(value):
     if not value:
         return _primary_color
     elif value.startswith("theme:"):
         return _app.theme_colors.get(value.replace("theme:", ""), _primary_color)
+    elif value.startswith("--"):
+        # we need the css var wrapped
+        return "var(" + value + ")"
     else:
         return value
 
 
+_hidden_style_getter = None
+
+
+def _get_computed_color(value):
+    global _hidden_style_getter
+    if _hidden_style_getter is None:
+        container = _document.createElement("div")
+        container.style.display = "none"
+        container.style.color = "chartreuse"  # obscure color
+        _hidden_style_getter = _document.createElement("div")
+        container.appendChild(_hidden_style_getter)
+        _document.body.appendChild(container)
+
+    _hidden_style_getter.style.color = ""
+    _hidden_style_getter.style.color = value
+
+    computed = window.getComputedStyle(_hidden_style_getter).color
+    if computed == "rgb(127, 255, 0)":
+        return value
+    else:
+        return computed
+
+
+def _strip_rgba(value):
+    original = value
+
+    value = value.strip()
+
+    if value.startswith("rgba("):
+        value = value[5:]
+
+    if value.startswith("rgb("):
+        value = value[4:]
+
+    if value.endswith(")"):
+        value = value[:-1]
+
+    value = value.split(",")
+
+    if len(value) == 3:
+        return " ".join(v.strip() for v in value)
+
+    if len(value) == 4:
+        return f"{value[0].strip()} {value[1].strip()} {value[2].strip()} / {value[3].strip()}"
+
+    return original
+
+
 def _get_rgb(value):
     value = _get_color(value)
-    if value.startswith("#"):
-        value = value[1:]
-        tmp = " ".join(str(int(value[i : i + 2], 16)) for i in (0, 2, 4))
-        if len(value) == 8:
-            alpha = str(int(value[6:], 16) / 256)
-            tmp += " / " + alpha
-        value = tmp
-    elif value.startswith("rgb") and value.endswith(")"):
-        value = value[value.find("(") + 1 : -1]
+
+    if value.startswith("--"):
+        # css var
+        value = "var(" + value + ")"
+    elif value.startswith("var("):
+        pass
     else:
-        raise ValueError(
-            f"expected a hex value, theme color or rgb value, not, {value}"
-        )
+        value = _get_computed_color(value)
+        value = _strip_rgba(value)
+
     return value
 
 
@@ -159,3 +211,33 @@ def _css_length(v):
         return f"{float(v)}px"
     except (TypeError, ValueError):
         return v
+
+
+def _ensure_role_is_list(role):
+    if role is None:
+        return []
+
+    if isinstance(role, str):
+        return [role]
+
+    return role
+
+
+def _add_roles(self, roles):
+    current_roles = _ensure_role_is_list(self.role)
+    new_roles = _ensure_role_is_list(roles)
+
+    for role in new_roles:
+        if role not in current_roles:
+            current_roles.append(role)
+
+    self.role = current_roles
+
+
+def _remove_roles(self, roles):
+    current_roles = _ensure_role_is_list(self.role)
+    roles_to_remove = _ensure_role_is_list(roles)
+
+    updated_roles = [role for role in current_roles if role not in roles_to_remove]
+
+    self.role = updated_roles

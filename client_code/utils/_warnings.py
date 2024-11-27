@@ -7,11 +7,11 @@
 
 __version__ = "3.0.0"
 
+_warnings = {}
 
-def __getattr__(name):
-    try:
-        mod = __import__(name)
-    except ImportError:
-        raise AttributeError(name)
-    globals()[name] = mod
-    return mod
+
+def warn(key, msg, type="WARNING"):
+    if _warnings.get(key):
+        return
+    _warnings[key] = True
+    print(f"{type}: {msg}")

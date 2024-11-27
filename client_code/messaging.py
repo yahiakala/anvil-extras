@@ -4,7 +4,16 @@
 # https://github.com/anvilistas/anvil-extras/graphs/contributors
 #
 # This software is published at https://github.com/anvilistas/anvil-extras
-__version__ = "2.6.2"
+
+from .logging import INFO
+from .logging import Logger as _Logger
+from .utils._warnings import warn as _warn
+
+__version__ = "3.0.0"
+
+
+_null_logger = _Logger()
+_null_logger.disabled = True
 
 
 class Message:
@@ -20,46 +29,57 @@ class Subscriber:
 
 
 class Publisher:
-    def __init__(self, with_logging=True):
-        self.with_logging = with_logging
-        self.subscribers = {}
+    default_log_level = INFO
 
-    def publish(self, channel, title, content=None, with_logging=None):
-        if with_logging is None:
-            with_logging = self.with_logging
+    def __init__(self, *, logger: _Logger = None, **kwargs):
+        self.logger = logger or _null_logger
+        self.subscribers = {}
+        self._deprecation_warnings(**kwargs)
+
+    def _deprecation_warnings(self, **kwargs):
+        if "with_logging" in kwargs:
+            _warn(
+                "publisher.with_logging",
+                "with_logging option is deprecated and it will be removed in future versions. Use the logger options instead, passing an instance of logging.Logger",
+                "DEPRECATION WARNING",
+            )
+
+    def publish(self, channel, title, content=None, **kwargs):
+        self._deprecation_warnings(**kwargs)
         message = Message(title, content)
         subscribers = self.subscribers.get(channel, [])
         for subscriber in subscribers:
             subscriber.handler(message)
-        if with_logging:
-            print(
-                f"Published '{message.title}' message on '{channel}' channel to "
-                f"{len(subscribers)} subscriber(s)"
-            )
+        self.logger.log(
+            self.default_log_level,
+            f"Published '{message.title}' message on '{channel}' channel to "
+            f"{len(subscribers)} subscriber(s)",
+        )
 
-    def subscribe(self, channel, subscriber, handler, with_logging=None):
-        if with_logging is None:
-            with_logging = self.with_logging
+    def subscribe(self, channel, subscriber, handler, **kwargs):
+        self._deprecation_warnings(**kwargs)
         if channel not in self.subscribers:
             self.subscribers[channel] = []
         self.subscribers[channel].append(Subscriber(subscriber, handler))
-        if with_logging:
-            print(f"Added subscriber to {channel} channel")
+        self.logger.log(
+            self.default_log_level, f"Added subscriber to {channel} channel"
+        )
 
-    def unsubscribe(self, channel, subscriber, with_logging=None):
-        if with_logging is None:
-            with_logging = self.with_logging
+    def unsubscribe(self, channel, subscriber, **kwargs):
+        self._deprecation_warnings(**kwargs)
         if channel in self.subscribers:
             self.subscribers[channel] = [
                 s for s in self.subscribers[channel] if s.subscriber != subscriber
             ]
-        if with_logging:
-            print(f"Removed subscriber from {channel} channel")
+        self.logger.log(
+            self.default_log_level, f"Removed subscriber from {channel} channel"
+        )
 
-    def close_channel(self, channel, with_logging=None):
-        if with_logging is None:
-            with_logging = self.with_logging
+    def close_channel(self, channel, **kwargs):
+        self._deprecation_warnings(**kwargs)
         subscribers_count = len(self.subscribers[channel])
         del self.subscribers[channel]
-        if with_logging:
-            print(f"{channel} closed ({subscribers_count} subscribers)")
+        self.logger.log(
+            self.default_log_level,
+            f"{channel} closed ({subscribers_count} subscribers)",
+        )

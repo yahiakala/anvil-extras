@@ -7,10 +7,10 @@
 from ..utils._component_helpers import _html_injector
 from ._anvil_designer import MessagePillTemplate
 
-__version__ = "2.6.2"
+__version__ = "3.0.0"
 
 css = """
-.anvil-role-message-pill {
+.anvil-role-ae-message-pill {
     padding-left: 1em;
     border-radius: 2em;
 }
@@ -33,7 +33,7 @@ class MessagePill(MessagePillTemplate):
     )
 
     def __init__(self, **properties):
-        self.label.role = "message-pill"
+        self.label.role = "ae-message-pill"
         self.init_components(**properties)
 
     @property

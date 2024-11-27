@@ -17,7 +17,7 @@ from anvil.js.window import jQuery as _S
 
 from .utils._deprecated import deprecated
 
-__version__ = "2.6.2"
+__version__ = "3.0.0"
 
 __all__ = ["add_event", "add_event_handler", "set_event_handler", "trigger"]
 
@@ -165,15 +165,15 @@ def wrap_event_method(method):
     old_method = getattr(_Component, method)
 
     @_wraps(old_method)
-    def wrapped(self, event, *args, **kws):
-        key = (type(self), event)
+    def wrapped(self, event_name, *args, **kws):
+        key = (type(self), event_name)
         if key not in _remap:
-            return old_method(self, event, *args, **kws)
+            return old_method(self, event_name, *args, **kws)
 
-        remapped = _prefix + event
+        remapped = _prefix + event_name
 
         if len(args) == 1 and callable(args[0]):
-            args = [_get_handler(args[0], event)]
+            args = [_get_handler(args[0], event_name)]
 
         return old_method(self, remapped, *args, **kws)
 

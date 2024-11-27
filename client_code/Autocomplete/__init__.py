@@ -16,15 +16,15 @@ from anvil.js.window import window as _window
 from ..utils._component_helpers import _html_injector
 from ._anvil_designer import AutocompleteTemplate
 
-__version__ = "2.6.2"
+__version__ = "3.0.0"
 
 
 _html_injector.css(
     """
-.anvil-role-autocomplete {
+.anvil-role-ae-autocomplete {
     padding: 0 !important;
 }
-.anvil-role-autocomplete {
+.anvil-role-ae-autocomplete {
     position: absolute;
     transform: scaleX(1) scaleY(1);
     opacity: 1;
@@ -38,16 +38,16 @@ _html_injector.css(
     z-index: 3001;
     box-shadow: 0 2px 2px 0 rgb(0 0 0 / 14%), 0 3px 1px -2px rgb(0 0 0 / 12%), 0 1px 5px 0 rgb(0 0 0 / 20%);
 }
-.anvil-role-autocomplete.visible-false {
+.anvil-role-ae-autocomplete.visible-false, .anvil-role-ae-autocomplete.anvil-visible-false {
     transform: scaleX(0) scaleY(0);
     opacity: 0;
     display: block !important;
     transition: all 200ms ease;
 }
-.anvil-role-autocomplete a {
+.anvil-role-ae-autocomplete a {
     padding: 7px 16px;
 }
-.anvil-role-autocomplete a:hover, .anvil-role-autocomplete a.anvil-role-active {
+.anvil-role-ae-autocomplete a:hover, .anvil-role-ae-autocomplete a.anvil-role-ae-autocomplete-active {
     background-color: #eee;
 }
 """
@@ -67,7 +67,7 @@ class Autocomplete(AutocompleteTemplate):
         self.init_components(**properties)
 
         self._lp = _LinearPanel(
-            role="autocomplete",
+            role="ae-autocomplete",
             spacing_above="none",
             spacing_below="none",
             visible=False,
@@ -80,7 +80,8 @@ class Autocomplete(AutocompleteTemplate):
         dom_node.addEventListener("input", self._on_input)
         dom_node.addEventListener("focus", self._on_focus, True)
         dom_node.addEventListener("blur", self._on_blur)
-        self.set_event_handler("x-popover-init", self._mk_popover)
+        self.set_event_handler("x-popover-init", self._handle_popover)
+        self.set_event_handler("x-popover-destroy", self._handle_popover)
 
         # ensure the same method is passed to $(window).off('resize')
         self._reset_position = self._reset_position
@@ -129,7 +130,7 @@ class Autocomplete(AutocompleteTemplate):
         try:
             self._active_index = self._active_nodes.index(prev_active)
             self._active = prev_active
-            self._active.role = "active"
+            self._active.role = "ae-autocomplete-active"
         except ValueError:
             pass
 
@@ -202,7 +203,7 @@ class Autocomplete(AutocompleteTemplate):
         if self._active is not None:
             self._active.role = None
         if new_active is not None:
-            new_active.role = "active"
+            new_active.role = "ae-autocomplete-active"
             self._link_height = (
                 self._link_height or _get_dom_node(new_active).clientHeight
             )
@@ -237,7 +238,7 @@ class Autocomplete(AutocompleteTemplate):
         _S(_window).off("resize", self._reset_position)
         self._nodes = {}
 
-    def _mk_popover(self, init_node, **event_args):
+    def _handle_popover(self, init_node, **event_args):
         init_node(self._lp_node)
 
     ##### Properties ######
