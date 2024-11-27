@@ -1,14 +1,77 @@
 # Unreleased
 
+## Bug Fixes
+* tabs - tab color was not being applied to inactive tabs
+  https://github.com/anvilistas/anvil-extras/issues/570
+* persistence - orginal class was missing from the resulting base classes
+  https://github.com/anvilistas/anvil-extras/pull/573
+* persistence - linked class attributes were not handling None values correctly
+  https://github.com/anvilistas/anvil-extras/pull/577
+* popover - fix bug with popovers not handling dom nodes correctly
+  https://github.com/anvilistas/anvil-extras/pull/580
+* theme - fix Colors() without a variant argument
+  https://github.com/anvilistas/anvil-extras/pull/581
+
+## Enhancements
+* tabs - tab color can now be a css var and better support for css colors in general
+  https://github.com/anvilistas/anvil-extras/pull/570
+* messaging - support custom loggers in messaging module
+  https://github.com/anvilistas/anvil-extras/issues/569
+* persistence - Handle addition and updates of instances with linked classes
+  https://github.com/anvilistas/anvil-extras/pull/575
+
+## Deprecations
+- messaging - with_logging argument is deprecated and maybe removed in a future version
+  logging messages is now off by default - to turn it on provide a custom `logger` argument
+  https://github.com/anvilistas/anvil-extras/pull/572/files
+- persistence - LinkedAttribute is deprecated and will be removed in a future version  https://github.com/anvilistas/anvil-extras/pull/578
+
+# v3.0.0
+
+## Bug Fixes
+* popover - fix bug where popovers could not be used on forms using layouts
+  https://github.com/anvilistas/anvil-extras/issues/553
+* ChipsInput - Chip close icon color is fixed for the last highlighted chip
+  https://github.com/anvilistas/anvil-extras/issues/567
+
+## Breaking Changes
+* popover - rewritten without bootstrap, now uses floating-ui
+  `dismiss_on_scroll` is deprecated
+  class names on the popover element have changed
+  https://github.com/anvilistas/anvil-extras/pull/563
+* multi-select - rewritten without bootstrap, now uses popover and basic anvil components
+  https://github.com/anvilistas/anvil-extras/pull/566
+* classic editor - design components are no longer supported
+  https://github.com/anvilistas/anvil-extras/issues/567
+* class-names and roles - all anvil extras components now use class names and roles prefixed with `ae-`
+  https://github.com/anvilistas/anvil-extras/issues/567
+
+
+# v2.7.0 05-Sep-2024
+
+## New Features
+* theme module - Define and switch between colour schemes via code
+  https://github.com/anvilistas/anvil-extras/pull/551
+* quill - implement get_markdown()
+  https://github.com/anvilistas/anvil-extras/pull/557
+
 ## Minor Changes
 * persistence - add reset method
   https://github.com/anvilistas/anvil-extras/pull/542
 * persistence - add set behaviour for linked classes
+
 ## Bug Fixes
 * multiselect - fix bug where enable_selct_all was not being set correctly
   https://anvil.works/forum/t/anvil-extras-2-6/21252/4
 * non-blocking - fix catching exceptions when accessing a non-blocking promise
   https://github.com/anvilistas/anvil-extras/pull/543
+* multiselect - fix select all buttons overlapping when using width=fit
+  https://github.com/anvilistas/anvil-extras/issues/545
+* mulitselect - fix bug where properties were not being set correctly
+  https://github.com/anvilistas/anvil-extras/issues/554
+* augment - fix bug where event couldn't be used as a raise_event kw
+  https://anvil.works/forum/t/tabulator-multiple-value-error-on-row-click/22158/9
+
 
 # v2.6.2 13-Jun-2024
 

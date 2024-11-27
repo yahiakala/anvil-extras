@@ -6,7 +6,9 @@
 # This software is published at https://github.com/anvilistas/anvil-extras
 import anvil.server
 
-__version__ = "2.6.2"
+from .utils._warnings import warn as _warn
+
+__version__ = "3.0.0"
 
 
 def _snakify(text):
@@ -30,6 +32,11 @@ class LinkedAttribute:
             The name of the column in the linked table which contains the required
             value
         """
+        _warn(
+            "persistence.LinkedAttribute",
+            "LinkedAttribute is deprecated and will be removed in future versions. Use a LinkedClass instead.",
+            "DEPRECATION_WARNING",
+        )
         self._linked_column = linked_column
         self._linked_attr = linked_attr
 
@@ -72,23 +79,19 @@ class LinkedClass:
         if instance is None:
             return self
 
-        if instance._delta and self._linked_column in instance._delta:
-            return self._cls(
-                instance._delta[self._linked_column], *self._args, **self._kwargs
-            )
-        return self._cls(
-            instance._store[self._linked_column], *self._args, **self._kwargs
-        )
-
         store = (
             instance._delta
             if instance._delta and self._linked_column in instance._delta
             else instance._store
         )
+        if not store or store[self._linked_column] is None:
+            return None
+
         return self._cls(store[self._linked_column], *self._args, **self._kwargs)
 
     def __set__(self, instance, value):
-        instance._delta[self._linked_column] = self._cls(value._store)
+        value = self._cls(value._store) if value is not None else None
+        instance._delta[self._linked_column] = value
 
 
 class PersistedClass:
@@ -162,15 +165,24 @@ class PersistedClass:
     def __setitem__(self, key, value):
         setattr(self, key, value)
 
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return getattr(self, self.key) == getattr(other, other.key)
+
     def add(self, *args, **kwargs):
         self._store = anvil.server.call(
-            f"add_{self._snake_name}", self._delta, *args, **kwargs
+            f"add_{self._snake_name}", _serialise_delta(self._delta), *args, **kwargs
         )
         self._delta.clear()
 
     def update(self, *args, **kwargs):
         anvil.server.call(
-            f"update_{self._snake_name}", self._store, self._delta, *args, **kwargs
+            f"update_{self._snake_name}",
+            self._store,
+            _serialise_delta(self._delta),
+            *args,
+            **kwargs,
         )
         self._delta.clear()
 
@@ -182,6 +194,13 @@ class PersistedClass:
         self._delta.clear()
 
 
+def _serialise_delta(delta):
+    return {
+        key: value._store if isinstance(value, PersistedClass) else value
+        for key, value in delta.items()
+    }
+
+
 def persisted_class(cls):
     """A decorator for a class with a persistence mechanism"""
-    return type(cls.__name__, (PersistedClass,), cls.__dict__.copy())
+    return type(cls.__name__, (cls, PersistedClass), cls.__dict__.copy())

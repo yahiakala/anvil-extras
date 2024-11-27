@@ -11,7 +11,7 @@ from anvil_extras.utils._component_helpers import _html_injector
 
 from ._anvil_designer import DeterminateTemplate
 
-__version__ = "2.6.2"
+__version__ = "3.0.0"
 
 _html_injector.css(ProgressBar.css)
 
@@ -19,8 +19,8 @@ _html_injector.css(ProgressBar.css)
 class Determinate(DeterminateTemplate):
     def __init__(self, **properties):
         self.indicator_dom_node = get_dom_node(self.indicator_panel)
-        self.role = "progress-track"
-        self.indicator_panel.role = "progress-indicator"
+        self.role = "ae-progress-track"
+        self.indicator_panel.role = "ae-progress-indicator"
         self._props = properties
         self.init_components(**properties)
 

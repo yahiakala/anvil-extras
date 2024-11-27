@@ -5,19 +5,28 @@
 #
 # This software is published at https://github.com/anvilistas/anvil-extras
 
-from anvil import CheckBox, app
+from anvil import CheckBox
 from anvil.js import get_dom_node as _get_dom_node
 from anvil.js.window import document as _document
 
-from ..utils._component_helpers import _get_rgb, _html_injector
+from ..utils._component_helpers import (
+    _get_color,
+    _get_rgb,
+    _html_injector,
+    _primary_color,
+    _supports_relative_colors,
+)
 
-__version__ = "2.6.2"
+__version__ = "3.0.0"
 
-primary = app.theme_colors.get("Primary 500", "#2196F3")
+primary = _primary_color
+
+if _supports_relative_colors():
+    _get_rgb = _get_color
 
 css = """
-.switch,
-.switch * {
+.ae-switch,
+.ae-switch * {
     -webkit-tap-highlight-color: transparent;
     -webkit-user-select: none;
     -moz-user-select: none;
@@ -25,27 +34,27 @@ css = """
     user-select: none;
 }
 
-.switch label {
+.ae-switch label {
     cursor: pointer;
 }
 
-.switch label input[type=checkbox] {
+.ae-switch label input[type=checkbox] {
     opacity: 0;
     width: 0;
     height: 0;
 }
-.switch label input[type=checkbox]:checked+.lever {
+.ae-switch label input[type=checkbox]:checked+.ae-switch-lever {
     background-color: rgba(var(--color) / .5);
 }
-.switch label input[type=checkbox]:checked+.lever:after,
-.switch label input[type=checkbox]:checked+.lever:before {
+.ae-switch label input[type=checkbox]:checked+.ae-switch-lever:after,
+.ae-switch label input[type=checkbox]:checked+.ae-switch-lever:before {
     left: 18px;
 }
-.switch label input[type=checkbox]:checked+.lever:after {
+.ae-switch label input[type=checkbox]:checked+.ae-switch-lever:after {
     background-color: rgb(var(--color));
 }
 
-.switch label .lever {
+.ae-switch label .ae-switch-lever {
     content: "";
     display: inline-block;
     position: relative;
@@ -59,8 +68,8 @@ css = """
     vertical-align: middle;
     margin: 0 16px;
 }
-.switch label .lever:after,
-.switch label .lever:before {
+.ae-switch label .ae-switch-lever:after,
+.ae-switch label .ae-switch-lever:before {
     content: "";
     position: absolute;
     display: inline-block;
@@ -74,34 +83,41 @@ css = """
     transition: left 0.3s ease, background 0.3s ease, box-shadow 0.1s ease, transform 0.1s ease;
     transition: left 0.3s ease, background 0.3s ease, box-shadow 0.1s ease, transform 0.1s ease, -webkit-box-shadow 0.1s ease, -webkit-transform 0.1s ease;
 }
-.switch label .lever:before {
+.ae-switch label .ae-switch-lever:before {
     background-color: rgb(var(--color) / 0.15);
 }
-.switch label .lever:after {
+.ae-switch label .ae-switch-lever:after {
     background-color: #F1F1F1;
     -webkit-box-shadow: 0 3px 1px -2px rgba(0,0,0,0.2),0px 2px 2px 0 rgba(0,0,0,0.14),0px 1px 5px 0 rgba(0,0,0,0.12);
     box-shadow: 0 3px 1px -2px rgba(0,0,0,0.2),0px 2px 2px 0 rgba(0,0,0,0.14),0px 1px 5px 0 rgba(0,0,0,0.12);
 }
-input[type=checkbox]:checked:not(:disabled) ~ .lever:active::before,
-input[type=checkbox]:checked:not(:disabled).tabbed:focus ~ .lever::before {
+input[type=checkbox]:checked:not(:disabled) ~ .ae-switch-lever:active::before {
     -webkit-transform: scale(2.4);
     transform: scale(2.4);
     background-color: rgb(var(--color) / 0.15);
 }
-input[type=checkbox]:not(:disabled) ~ .lever:active:before,
-input[type=checkbox]:not(:disabled).tabbed:focus ~ .lever::before {
+input[type=checkbox]:not(:disabled) ~ .ae-switch-lever:active:before {
     -webkit-transform: scale(2.4);
     transform: scale(2.4);
     background-color: rgba(0,0,0,0.08);
 }
 
-.switch input[type=checkbox][disabled]+.lever {
+.ae-switch input[type=checkbox][disabled]+.ae-switch-lever {
     cursor: default;
     background-color: rgba(0,0,0,0.12);
 }
-.switch label input[type=checkbox][disabled]+.lever:after,
-.switch label input[type=checkbox][disabled]:checked+.lever:after {
+.ae-switch label input[type=checkbox][disabled]+.ae-switch-lever:after,
+.ae-switch label input[type=checkbox][disabled]:checked+.ae-switch-lever:after {
     background-color: #949494;
+}
+
+@supports (color: rgb(from white r g b / 0.2)) {
+    .ae-switch label input[type=checkbox]:checked+.ae-switch-lever {
+        background-color: rgba(from var(--color) r g b / .5);
+    }
+    .ae-switch label input[type=checkbox]:checked+.ae-switch-lever:after {
+        background-color: var(--color);
+    }
 }
 
 """
@@ -145,10 +161,10 @@ _prop_descriptions = _clean_props(getattr(CheckBox, "_anvil_properties_", []))
 class Switch(CheckBox):
     def __init__(self, checked_color=primary, text_pre="", text_post="", **properties):
         dom_node = self._dom_node = _get_dom_node(self)
-        dom_node.firstElementChild.classList.add("switch")
+        dom_node.firstElementChild.classList.add("ae-switch")
 
         span = dom_node.querySelector("span")
-        span.classList.add("lever")
+        span.classList.add("ae-switch-lever")
         span.removeAttribute("style")
 
         input = dom_node.querySelector("input")

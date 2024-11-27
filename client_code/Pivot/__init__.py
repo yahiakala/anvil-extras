@@ -10,7 +10,7 @@ import anvil.js
 from ..utils import _component_helpers as helpers
 from ._anvil_designer import PivotTemplate
 
-__version__ = "2.6.2"
+__version__ = "3.0.0"
 
 pivottable_version = "2.23.0"
 jqueryui_version = "1.11.4"
@@ -28,7 +28,7 @@ helpers._html_injector.css(
     """.anvil-container-overflow, .anvil-panel-col {
         overflow: visible;
     }
-    .anvil-extras-pivot-container {
+    .ae-pivot-container {
         display: grid
     }
     .pivot-placeholder {
@@ -67,9 +67,8 @@ class Pivot(PivotTemplate):
             option: properties[option] for option in self.option_names
         }
         dom_node = anvil.js.get_dom_node(self)
-        self.pivot_node = dom_node.querySelector(".anvil-extras-pivot")
-        dom_node.querySelector("script").remove()
-        dom_node.classList.add("anvil-extras-pivot-container")
+        self.pivot_node = self.dom_nodes["ae-pivot"]
+        dom_node.classList.add("ae-pivot-container")
         self.init_components(**properties)
 
     def _init_pivot(self):
